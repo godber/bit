@@ -1,35 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>TRON Bit Demo</title>
-    <style>
-      body {
-        margin: 0;
-        background-color: #000;
-        overflow: hidden;
-        color: #0ff;
-        font-family: sans-serif;
-      }
-      #ui {
-        position: absolute;
-        top: 1rem;
-        left: 1rem;
-      }
-      button {
-        font-size: 1rem;
-        background: #0ff;
-        color: #000;
-        border: none;
-        padding: 0.5rem 1rem;
-        cursor: pointer;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="ui">
-      <button id="toggle">Toggle (YES / NO)</button>
-    </div>
-    <script type="module" src="main.js"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <title>TRON Bit — Press & Hold Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #000;
+      --cyan: #1ec8ff;   /* idle (icosahedron) */
+      --yellow: #ffd400; /* yes (cube) */
+      --orange: #ff6a00; /* no (spikes) */
+    }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: #cfefff;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      overflow: hidden;
+    }
+    #ui {
+      position: fixed;
+      inset: auto 0 1.25rem 0;
+      display: flex;
+      gap: .75rem;
+      justify-content: center;
+      pointer-events: none; /* let buttons float but not block canvas except on buttons */
+    }
+    .btn {
+      pointer-events: auto;
+      border: none;
+      border-radius: 999px;
+      padding: .7rem 1.1rem;
+      font-weight: 700;
+      letter-spacing: .02em;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(0,0,0,.45);
+      transition: transform .05s ease, filter .15s ease;
+    }
+    .btn:active { transform: translateY(1px) scale(.99); }
+
+    #btnYes { background: var(--yellow); color: #222; }
+    #btnNo  { background: var(--orange); color: #111; }
+
+    /* subtle hint at the top-left */
+    #hint {
+      position: fixed; top: 12px; left: 12px; opacity: .65; font-size: .9rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="hint">Idle: Blue Icosahedron • Press & hold buttons to change state</div>
+  <div id="ui">
+    <button id="btnYes" class="btn" aria-pressed="false">YES (Hold)</button>
+    <button id="btnNo"  class="btn" aria-pressed="false">NO (Hold)</button>
+  </div>
+  <script type="module" src="main.js"></script>
+</body>
 </html>
