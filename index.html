@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>TRON Bit — Press & Hold Demo</title>
+  <title>TRON Bit — Nested Pulsing & Smooth Transition</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {
       --bg: #000;
-      --cyan: #1ec8ff;   /* idle (icosahedron) */
-      --yellow: #ffd400; /* yes (cube) */
-      --orange: #ff6a00; /* no (spikes) */
+      --cyan: #1ec8ff;   /* idle icosahedra */
+      --yellow: #ffd400; /* yes cube */
+      --orange: #ff6a00; /* no spiky */
     }
     html, body { height: 100%; }
     body {
@@ -25,7 +25,7 @@
       display: flex;
       gap: .75rem;
       justify-content: center;
-      pointer-events: none; /* let buttons float but not block canvas except on buttons */
+      pointer-events: none;
     }
     .btn {
       pointer-events: auto;
@@ -39,18 +39,13 @@
       transition: transform .05s ease, filter .15s ease;
     }
     .btn:active { transform: translateY(1px) scale(.99); }
-
     #btnYes { background: var(--yellow); color: #222; }
     #btnNo  { background: var(--orange); color: #111; }
-
-    /* subtle hint at the top-left */
-    #hint {
-      position: fixed; top: 12px; left: 12px; opacity: .65; font-size: .9rem;
-    }
+    #hint { position: fixed; top: 12px; left: 12px; opacity: .65; font-size: .9rem; }
   </style>
 </head>
 <body>
-  <div id="hint">Idle: Blue Icosahedron • Press & hold buttons to change state</div>
+  <div id="hint">Idle: Blue Icosahedra • Press & hold buttons to change state</div>
   <div id="ui">
     <button id="btnYes" class="btn" aria-pressed="false">YES (Hold)</button>
     <button id="btnNo"  class="btn" aria-pressed="false">NO (Hold)</button>
