@@ -10,9 +10,9 @@ let lastTime = performance.now();
 // Transition tuning
 const TRANSITION_TIME = 300; // ms
 const COLORS = {
-  idle: 0x1ec8ff,
-  yes:  0xffd400,
-  no:   0xff6a00
+  idle: 0x1ec8ff, // blue/cyan
+  yes:  0xffd400, // yellow
+  no:   0xff6a00  // orange
 };
 
 init();
@@ -31,18 +31,21 @@ function init() {
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
-  // Build state groups (each = nested/pulsing inner+outer)
+  // Build state groups (each = nested/pulsing inner+outer, with desynced rotations)
   groups.idle = makeNestedGroup(
     new THREE.IcosahedronGeometry(0.9, 0),
-    COLORS.idle
+    COLORS.idle,
+    101 // seed for axes/speeds
   );
   groups.yes  = makeNestedGroup(
     new THREE.BoxGeometry(1.05, 1.05, 1.05),
-    COLORS.yes
+    COLORS.yes,
+    202
   );
   groups.no   = makeNestedGroup(
     makeSpikyGeometry(new THREE.IcosahedronGeometry(0.7, 2), { minAmp: 0.22, maxAmp: 0.5, seed: 7331 }),
-    COLORS.no
+    COLORS.no,
+    303
   );
 
   // Start with only idle visible
@@ -67,9 +70,8 @@ function init() {
   window.addEventListener('resize', onResize);
 }
 
-/* ---------------- Nested pulsing group ---------------- */
-function makeNestedGroup(baseGeom, colorHex) {
-  // Two wireframe meshes with different base scales + opacity; they pulse with phase offset
+/* ---------------- Nested pulsing group (with desynced rotations) ---------------- */
+function makeNestedGroup(baseGeom, colorHex, seed = 1) {
   const group = new THREE.Group();
 
   const matOuter = new THREE.MeshBasicMaterial({ color: colorHex, wireframe: true, transparent: true, opacity: 0.9 });
@@ -82,11 +84,29 @@ function makeNestedGroup(baseGeom, colorHex) {
   outer.scale.setScalar(1.00);
   inner.scale.setScalar(0.75);
 
-  // Subtle separation to avoid perfect overlap shimmer
   outer.renderOrder = 1;
   inner.renderOrder = 0;
 
-  group.userData = { inner, outer };
+  // Generate different axes & speeds using a tiny PRNG so they’re stable but distinct
+  const rnd = mulberry32(seed);
+  const axisOuter = new THREE.Vector3(rnd()*2-1, rnd()*2-1, rnd()*2-1).normalize();
+  const axisInner = new THREE.Vector3(rnd()*2-1, rnd()*2-1, rnd()*2-1).normalize();
+
+  // Gentle group precession (tilt + slow spin) so outer/inner axes are offset from world axes
+  const precessAxis = new THREE.Vector3(rnd(), rnd(), rnd()).normalize();
+
+  // Speeds in radians/sec; inner slightly different than outer
+  const speedOuter = 0.7 + rnd() * 0.4;  // 0.7..1.1
+  const speedInner = 1.0 + rnd() * 0.6;  // 1.0..1.6 (faster and different)
+  const precessSpeed = 0.15 + rnd() * 0.1; // very slow
+
+  group.userData = {
+    inner, outer,
+    axisOuter, axisInner,
+    speedOuter, speedInner,
+    precessAxis, precessSpeed
+  };
+
   group.add(outer, inner);
   return group;
 }
@@ -108,7 +128,6 @@ function setTarget(next) {
   if (targetState === next) return;
   targetState = next;
 
-  // If switching to a different state, make sure both current & target groups are visible
   if (currentState !== targetState) {
     groups[currentState].visible = true;
     groups[targetState].visible = true;
@@ -120,44 +139,53 @@ function setTarget(next) {
 function animate() {
   requestAnimationFrame(animate);
   const now = performance.now();
-  const dt = now - lastTime;
+  const dtMs = now - lastTime;
+  const dt = dtMs / 1000;
   lastTime = now;
 
   // Update transition
   if (currentState !== targetState) {
-    transitionT = Math.min(1, transitionT + dt / TRANSITION_TIME);
+    transitionT = Math.min(1, transitionT + dtMs / TRANSITION_TIME);
     const e = easeInOutCubic(transitionT);
-
-    // Grow target, shrink current
     applyCrossfade(groups[currentState], groups[targetState], e);
 
     if (transitionT >= 1) {
-      // Commit state
       groups[currentState].visible = false;
       currentState = targetState;
-
-      // Reset target group to full visibility/scale
       resetGroupVisual(groups[currentState]);
     }
   }
 
-  // Global hover/rotation
+  // Global hover
   const t = now * 0.001;
   const hover = Math.sin(t * 1.7) * 0.18;
   [groups.idle, groups.yes, groups.no].forEach(g => {
     g.position.y = hover;
-    const rx = currentState === 'idle' ? 0.012 : 0.02;
-    const ry = currentState === 'idle' ? 0.017 : 0.025;
-    g.rotation.x += rx;
-    g.rotation.y += ry;
   });
 
-  // Nested pulsing (each visible group pulses; inner/outer with phase offset)
-  pulseGroup(groups.idle, t, 1.0, 0.06, 0.0);   // (baseScale, amp, phase)
+  // Desynced rotations & pulsing (only apply to visible groups)
+  rotateGroup(groups.idle, dt);
+  rotateGroup(groups.yes,  dt);
+  rotateGroup(groups.no,   dt);
+
+  pulseGroup(groups.idle, t, 1.0, 0.06, 0.0);
   pulseGroup(groups.yes,  t, 1.0, 0.05, 0.6);
   pulseGroup(groups.no,   t, 1.0, 0.05, 1.2);
 
   renderer.render(scene, camera);
+}
+
+/* ---------------- Helpers: per-group rotation ---------------- */
+function rotateGroup(group, dt) {
+  if (!group.visible) return;
+  const { inner, outer, axisOuter, axisInner, speedOuter, speedInner, precessAxis, precessSpeed } = group.userData;
+
+  // Very gentle parent precession (tilts axes over time so they’re not locked)
+  group.rotateOnAxis(precessAxis, precessSpeed * dt);
+
+  // Rotate inner/outer on their own distinct axes & speeds
+  outer.rotateOnAxis(axisOuter, speedOuter * dt);
+  inner.rotateOnAxis(axisInner, speedInner * dt);
 }
 
 /* ---------------- Helpers: pulsing & crossfade ---------------- */
@@ -181,18 +209,17 @@ function pulseGroup(group, t, base = 1.0, amp = 0.05, phase = 0) {
 
 function applyCrossfade(fromGroup, toGroup, e) {
   // e: 0 -> 1
-  // Scale: to grows from 0.6 to 1.0, from shrinks 1.0 -> 0.6
+  // Scale crossfade
   const scaleFrom = 1.0 - 0.4 * e;
   const scaleTo   = 0.6 + 0.4 * e;
 
   setGroupScale(fromGroup, scaleFrom);
   setGroupScale(toGroup,   scaleTo);
 
-  // Opacity crossfade on both inner & outer
+  // Opacity crossfade
   setGroupOpacity(fromGroup, 1.0 - e * 0.9);
   setGroupOpacity(toGroup,   0.1 + e * 0.9);
 
-  // Ensure both visible during transition
   fromGroup.visible = true;
   toGroup.visible = true;
 }
@@ -226,7 +253,6 @@ function makeSpikyGeometry(baseGeom, { minAmp = 0.2, maxAmp = 0.5, seed = 42 } =
   const v = new THREE.Vector3();
   const rand = mulberry32(seed);
 
-  // Per-vertex amplitude
   const amps = new Float32Array(pos.count);
   for (let i = 0; i < pos.count; i++) {
     amps[i] = minAmp + (maxAmp - minAmp) * rand();
@@ -244,6 +270,7 @@ function makeSpikyGeometry(baseGeom, { minAmp = 0.2, maxAmp = 0.5, seed = 42 } =
   return geom;
 }
 
+/* ---------------- Tiny PRNG ---------------- */
 function mulberry32(a) {
   return function() {
     let t = a += 0x6D2B79F5;
