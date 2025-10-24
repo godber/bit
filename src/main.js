@@ -1,4 +1,4 @@
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.161/build/three.module.js';
+import * as THREE from 'three';
 
 let scene, camera, renderer;
 let groups = {};         // { idle, yes, no }
