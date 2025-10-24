@@ -20,6 +20,11 @@
   "homepage": "https://github.com/godber/bit#readme",
   "packageManager": "bun@1.1.10",
   "dependencies": {
+    "@react-three/drei": "^10.7.6",
+    "@react-three/fiber": "^9.4.0",
+    "@vitejs/plugin-react": "^5.1.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "three": "^0.161.0"
   },
   "devDependencies": {
