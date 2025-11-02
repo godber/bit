@@ -56,9 +56,9 @@ const createNoGeometry = (size = 0.7, minAmp = 0.22, maxAmp = 0.5, seed = 7331) 
   makeSpikyGeometry(new THREE.IcosahedronGeometry(size, 2), { minAmp, maxAmp, seed });
 
 export default function BitScene({ targetState, materialConfig, animationConfig, rotationConfig, lightingConfig, geometryConfig }) {
-  const idle = useBitGroup(() => createIdleGeometry(geometryConfig.idleGeometrySize), COLORS.idle, 101, materialConfig, geometryConfig);
-  const yes = useBitGroup(() => createYesGeometry(geometryConfig.yesGeometrySize), COLORS.yes, 202, materialConfig, geometryConfig);
-  const no = useBitGroup(() => createNoGeometry(geometryConfig.noGeometrySize, geometryConfig.noSpikyMinAmp, geometryConfig.noSpikyMaxAmp, geometryConfig.noSpikySeed), COLORS.no, 303, materialConfig, geometryConfig);
+  const idle = useBitGroup(() => createIdleGeometry(geometryConfig.idleGeometrySize), COLORS.idle, 101, materialConfig);
+  const yes = useBitGroup(() => createYesGeometry(geometryConfig.yesGeometrySize), COLORS.yes, 202, materialConfig);
+  const no = useBitGroup(() => createNoGeometry(geometryConfig.noGeometrySize, geometryConfig.noSpikyMinAmp, geometryConfig.noSpikyMaxAmp, geometryConfig.noSpikySeed), COLORS.no, 303, materialConfig);
 
   const currentState = useRef(STATES.idle);
   const transitionT = useRef(1);
