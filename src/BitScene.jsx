@@ -15,7 +15,42 @@ const COLORS = {
   no: 0xff6a00
 };
 
-const createIdleGeometry = () => new THREE.IcosahedronGeometry(0.9, 0);
+const createIdleGeometry = () => {
+  // Create compound of dodecahedron and icosahedron
+  const dodecahedron = new THREE.DodecahedronGeometry(0.9, 0);
+  const icosahedron = new THREE.IcosahedronGeometry(0.9, 0);
+
+  // Manually merge both geometries into a single compound geometry
+  const dodecaPos = dodecahedron.attributes.position;
+  const icosaPos = icosahedron.attributes.position;
+
+  // Create new buffer with combined vertices
+  const totalVertices = dodecaPos.count + icosaPos.count;
+  const positions = new Float32Array(totalVertices * 3);
+
+  // Copy dodecahedron vertices
+  for (let i = 0; i < dodecaPos.count * 3; i++) {
+    positions[i] = dodecaPos.array[i];
+  }
+
+  // Copy icosahedron vertices
+  const offset = dodecaPos.count * 3;
+  for (let i = 0; i < icosaPos.count * 3; i++) {
+    positions[offset + i] = icosaPos.array[i];
+  }
+
+  // Create compound geometry
+  const compound = new THREE.BufferGeometry();
+  compound.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  compound.computeVertexNormals();
+  compound.computeBoundingSphere();
+
+  // Clean up individual geometries
+  dodecahedron.dispose();
+  icosahedron.dispose();
+
+  return compound;
+};
 const createYesGeometry = () => new THREE.BoxGeometry(1.05, 1.05, 1.05);
 const createNoGeometry = () =>
   makeSpikyGeometry(new THREE.IcosahedronGeometry(0.7, 2), { minAmp: 0.22, maxAmp: 0.5, seed: 7331 });
