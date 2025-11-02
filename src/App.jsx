@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import BitScene from './BitScene.jsx';
 import './app.css';
@@ -12,10 +12,21 @@ const STATES = {
 export default function App() {
   const [targetState, setTargetState] = useState(STATES.idle);
   const [activeButton, setActiveButton] = useState(null);
+  const yesAudioRef = useRef(null);
+  const noAudioRef = useRef(null);
 
   const handlePressStart = useCallback((state) => {
     setActiveButton(state);
     setTargetState(state);
+
+    // Play corresponding audio
+    if (state === STATES.yes && yesAudioRef.current) {
+      yesAudioRef.current.currentTime = 0; // Reset to start
+      yesAudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+    } else if (state === STATES.no && noAudioRef.current) {
+      noAudioRef.current.currentTime = 0; // Reset to start
+      noAudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+    }
   }, []);
 
   const handlePressEnd = useCallback(() => {
@@ -82,6 +93,10 @@ export default function App() {
           NO (Hold)
         </button>
       </div>
+
+      {/* Audio elements */}
+      <audio ref={yesAudioRef} src="/bit-yes-original.mp3" preload="auto" />
+      <audio ref={noAudioRef} src="/bit-no.mp3" preload="auto" />
     </div>
   );
 }
