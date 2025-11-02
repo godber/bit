@@ -55,10 +55,10 @@ const createYesGeometry = () => new THREE.BoxGeometry(1.05, 1.05, 1.05);
 const createNoGeometry = () =>
   makeSpikyGeometry(new THREE.IcosahedronGeometry(0.7, 2), { minAmp: 0.22, maxAmp: 0.5, seed: 7331 });
 
-export default function BitScene({ targetState }) {
-  const idle = useBitGroup(createIdleGeometry, COLORS.idle, 101);
-  const yes = useBitGroup(createYesGeometry, COLORS.yes, 202);
-  const no = useBitGroup(createNoGeometry, COLORS.no, 303);
+export default function BitScene({ targetState, materialConfig }) {
+  const idle = useBitGroup(createIdleGeometry, COLORS.idle, 101, materialConfig);
+  const yes = useBitGroup(createYesGeometry, COLORS.yes, 202, materialConfig);
+  const no = useBitGroup(createNoGeometry, COLORS.no, 303, materialConfig);
 
   const currentState = useRef(STATES.idle);
   const transitionT = useRef(1);
@@ -124,6 +124,11 @@ export default function BitScene({ targetState }) {
 
   return (
     <>
+      {/* Enhanced lighting for metallic materials */}
+      <directionalLight position={[5, 5, 5]} intensity={1.5} color={0xffffff} />
+      <directionalLight position={[-5, -5, -5]} intensity={0.5} color={0x4488ff} />
+      <pointLight position={[0, 5, 0]} intensity={0.8} color={0xffffff} />
+
       <BitGroup bundle={idle} />
       <BitGroup bundle={yes} />
       <BitGroup bundle={no} />
@@ -145,7 +150,7 @@ function BitGroup({ bundle }) {
   );
 }
 
-function useBitGroup(createGeometry, colorHex, seed) {
+function useBitGroup(createGeometry, colorHex, seed, materialConfig) {
   const groupRef = useRef();
   const outerRef = useRef();
   const innerRef = useRef();
@@ -157,11 +162,42 @@ function useBitGroup(createGeometry, colorHex, seed) {
   }, [createGeometry]);
 
   const materials = useMemo(() => {
-    return {
-      outer: new THREE.MeshBasicMaterial({ color: colorHex, wireframe: true, transparent: true, opacity: 0.9 }),
-      inner: new THREE.MeshBasicMaterial({ color: colorHex, wireframe: true, transparent: true, opacity: 0.65 })
-    };
-  }, [colorHex]);
+    if (!materialConfig) {
+      // Default wireframe materials
+      return {
+        outer: new THREE.MeshBasicMaterial({ color: colorHex, wireframe: true, transparent: true, opacity: 0.9 }),
+        inner: new THREE.MeshBasicMaterial({ color: colorHex, wireframe: true, transparent: true, opacity: 0.65 })
+      };
+    }
+
+    const { wireframe, metalness, roughness, envMapIntensity } = materialConfig;
+
+    if (wireframe) {
+      // Wireframe mode: use MeshBasicMaterial
+      return {
+        outer: new THREE.MeshBasicMaterial({ color: colorHex, wireframe: true, transparent: true, opacity: 0.9 }),
+        inner: new THREE.MeshBasicMaterial({ color: colorHex, wireframe: true, transparent: true, opacity: 0.65 })
+      };
+    } else {
+      // Opaque mode: use MeshStandardMaterial with metallic properties
+      return {
+        outer: new THREE.MeshStandardMaterial({
+          color: colorHex,
+          wireframe: false,
+          metalness,
+          roughness,
+          envMapIntensity
+        }),
+        inner: new THREE.MeshStandardMaterial({
+          color: colorHex,
+          wireframe: false,
+          metalness,
+          roughness,
+          envMapIntensity
+        })
+      };
+    }
+  }, [colorHex, materialConfig]);
 
   const dynamics = useMemo(() => {
     const rnd = mulberry32(seed);
@@ -242,10 +278,13 @@ function pulseGroup(bundle, t, base = 1.0, amp = 0.05, phase = 0) {
   outer.scale.setScalar(sOuter);
   inner.scale.setScalar(sInner);
 
-  const shimmerOuter = 0.1 * Math.sin(t * 2.0 + phase);
-  const shimmerInner = 0.1 * Math.sin(t * 2.7 + phase + 0.4);
-  outer.material.opacity = THREE.MathUtils.clamp(baseOpacity + shimmerOuter * 0.5, 0.05, 1.0);
-  inner.material.opacity = THREE.MathUtils.clamp(baseInnerOpacity + shimmerInner * 0.5, 0.05, 1.0);
+  // Only apply opacity changes in wireframe mode (MeshBasicMaterial with transparent)
+  if (outer.material.transparent) {
+    const shimmerOuter = 0.1 * Math.sin(t * 2.0 + phase);
+    const shimmerInner = 0.1 * Math.sin(t * 2.7 + phase + 0.4);
+    outer.material.opacity = THREE.MathUtils.clamp(baseOpacity + shimmerOuter * 0.5, 0.05, 1.0);
+    inner.material.opacity = THREE.MathUtils.clamp(baseInnerOpacity + shimmerInner * 0.5, 0.05, 1.0);
+  }
 }
 
 function applyCrossfade(fromBundle, toBundle, e) {
@@ -285,8 +324,12 @@ function setGroupOpacity(bundle, baseOp = 0.9) {
   if (!outer || !inner) return;
 
   bundle.opacityBase = baseOp;
-  outer.material.opacity = baseOp;
-  inner.material.opacity = Math.max(0, baseOp - 0.25);
+
+  // Only set opacity in wireframe mode (when material supports transparency)
+  if (outer.material.transparent) {
+    outer.material.opacity = baseOp;
+    inner.material.opacity = Math.max(0, baseOp - 0.25);
+  }
 }
 
 function easeInOutCubic(x) {

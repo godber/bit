@@ -1,5 +1,6 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
+import { useControls } from 'leva';
 import BitScene from './BitScene.jsx';
 import './app.css';
 
@@ -14,6 +15,14 @@ export default function App() {
   const [activeButton, setActiveButton] = useState(null);
   const yesAudioRef = useRef(null);
   const noAudioRef = useRef(null);
+
+  // Leva controls for material configuration
+  const materialConfig = useControls('Material', {
+    wireframe: true,
+    metalness: { value: 0.8, min: 0, max: 1, step: 0.01 },
+    roughness: { value: 0.3, min: 0, max: 1, step: 0.01 },
+    envMapIntensity: { value: 1.0, min: 0, max: 3, step: 0.1 }
+  });
 
   const handlePressStart = useCallback((state) => {
     setActiveButton(state);
@@ -97,7 +106,7 @@ export default function App() {
         <color attach="background" args={['#000000']} />
         <ambientLight color={0x2266ff} intensity={0.25} />
         <Suspense fallback={null}>
-          <BitScene targetState={targetState} />
+          <BitScene targetState={targetState} materialConfig={materialConfig} />
         </Suspense>
       </Canvas>
 
