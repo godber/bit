@@ -15,10 +15,10 @@ const COLORS = {
   no: 0xff6a00
 };
 
-const createIdleGeometry = () => {
+const createIdleGeometry = (size = 0.9) => {
   // Create compound of dodecahedron and icosahedron
-  const dodecahedron = new THREE.DodecahedronGeometry(0.9, 0);
-  const icosahedron = new THREE.IcosahedronGeometry(0.9, 0);
+  const dodecahedron = new THREE.DodecahedronGeometry(size, 0);
+  const icosahedron = new THREE.IcosahedronGeometry(size, 0);
 
   // Manually merge both geometries into a single compound geometry
   const dodecaPos = dodecahedron.attributes.position;
@@ -51,14 +51,14 @@ const createIdleGeometry = () => {
 
   return compound;
 };
-const createYesGeometry = () => new THREE.BoxGeometry(1.05, 1.05, 1.05);
-const createNoGeometry = () =>
-  makeSpikyGeometry(new THREE.IcosahedronGeometry(0.7, 2), { minAmp: 0.22, maxAmp: 0.5, seed: 7331 });
+const createYesGeometry = (size = 1.05) => new THREE.BoxGeometry(size, size, size);
+const createNoGeometry = (size = 0.7, minAmp = 0.22, maxAmp = 0.5, seed = 7331) =>
+  makeSpikyGeometry(new THREE.IcosahedronGeometry(size, 2), { minAmp, maxAmp, seed });
 
-export default function BitScene({ targetState, materialConfig }) {
-  const idle = useBitGroup(createIdleGeometry, COLORS.idle, 101, materialConfig);
-  const yes = useBitGroup(createYesGeometry, COLORS.yes, 202, materialConfig);
-  const no = useBitGroup(createNoGeometry, COLORS.no, 303, materialConfig);
+export default function BitScene({ targetState, materialConfig, animationConfig, rotationConfig, lightingConfig, geometryConfig }) {
+  const idle = useBitGroup(() => createIdleGeometry(geometryConfig.idleGeometrySize), COLORS.idle, 101, materialConfig);
+  const yes = useBitGroup(() => createYesGeometry(geometryConfig.yesGeometrySize), COLORS.yes, 202, materialConfig);
+  const no = useBitGroup(() => createNoGeometry(geometryConfig.noGeometrySize, geometryConfig.noSpikyMinAmp, geometryConfig.noSpikyMaxAmp, geometryConfig.noSpikySeed), COLORS.no, 303, materialConfig);
 
   const currentState = useRef(STATES.idle);
   const transitionT = useRef(1);
@@ -94,7 +94,7 @@ export default function BitScene({ targetState, materialConfig }) {
     const to = resolveGroup(targetState, idle, yes, no);
 
     if (currentState.current !== targetState && from && to) {
-      transitionT.current = Math.min(1, transitionT.current + (delta * 1000) / TRANSITION_TIME);
+      transitionT.current = Math.min(1, transitionT.current + (delta * 1000) / animationConfig.transitionTime);
       const eased = easeInOutCubic(transitionT.current);
       applyCrossfade(from, to, eased);
 
@@ -107,27 +107,27 @@ export default function BitScene({ targetState, materialConfig }) {
       }
     }
 
-    const hover = Math.sin(state.clock.elapsedTime * 1.7) * 0.18;
+    const hover = Math.sin(state.clock.elapsedTime * animationConfig.hoverFrequency) * animationConfig.hoverAmplitude;
     [idle, yes, no].forEach((group) => {
       if (group.groupRef.current) group.groupRef.current.position.y = hover;
     });
 
-    rotateGroup(idle, delta);
-    rotateGroup(yes, delta);
-    rotateGroup(no, delta);
+    rotateGroup(idle, delta, rotationConfig, STATES.idle);
+    rotateGroup(yes, delta, rotationConfig, STATES.yes);
+    rotateGroup(no, delta, rotationConfig, STATES.no);
 
     const t = state.clock.elapsedTime;
-    pulseGroup(idle, t, 1.0, 0.06, 0.0);
-    pulseGroup(yes, t, 1.0, 0.05, 0.6);
-    pulseGroup(no, t, 1.0, 0.05, 1.2);
+    pulseGroup(idle, t, 1.0, animationConfig.idlePulseAmp, 0.0, animationConfig);
+    pulseGroup(yes, t, 1.0, animationConfig.yesPulseAmp, 0.6, animationConfig);
+    pulseGroup(no, t, 1.0, animationConfig.noPulseAmp, 1.2, animationConfig);
   });
 
   return (
     <>
       {/* Enhanced lighting for metallic materials */}
-      <directionalLight position={[5, 5, 5]} intensity={1.5} color={0xffffff} />
-      <directionalLight position={[-5, -5, -5]} intensity={0.5} color={0x4488ff} />
-      <pointLight position={[0, 5, 0]} intensity={0.8} color={0xffffff} />
+      <directionalLight position={[5, 5, 5]} intensity={lightingConfig.mainLightIntensity} color={0xffffff} />
+      <directionalLight position={[-5, -5, -5]} intensity={lightingConfig.backLightIntensity} color={0x4488ff} />
+      <pointLight position={[0, 5, 0]} intensity={lightingConfig.topLightIntensity} color={0xffffff} />
 
       <BitGroup bundle={idle} />
       <BitGroup bundle={yes} />
@@ -252,19 +252,25 @@ function resolveGroup(state, idle, yes, no) {
   }
 }
 
-function rotateGroup(bundle, delta) {
+function rotateGroup(bundle, delta, rotationConfig, state) {
   if (!bundle.groupRef.current?.visible) return;
   const { axisOuter, axisInner, precessAxis, speedOuter, speedInner, precessSpeed } = bundle.dynamics;
   const group = bundle.groupRef.current;
   const outer = bundle.outerRef.current;
   const inner = bundle.innerRef.current;
 
-  group.rotateOnAxis(precessAxis, precessSpeed * delta);
-  outer.rotateOnAxis(axisOuter, speedOuter * delta);
-  inner.rotateOnAxis(axisInner, speedInner * delta);
+  // Get speed multiplier based on state
+  let speedMultiplier = 1.0;
+  if (state === STATES.idle) speedMultiplier = rotationConfig.idleSpeedMultiplier;
+  else if (state === STATES.yes) speedMultiplier = rotationConfig.yesSpeedMultiplier;
+  else if (state === STATES.no) speedMultiplier = rotationConfig.noSpeedMultiplier;
+
+  group.rotateOnAxis(precessAxis, precessSpeed * delta * speedMultiplier);
+  outer.rotateOnAxis(axisOuter, speedOuter * delta * speedMultiplier);
+  inner.rotateOnAxis(axisInner, speedInner * delta * speedMultiplier * rotationConfig.outerInnerSpeedRatio);
 }
 
-function pulseGroup(bundle, t, base = 1.0, amp = 0.05, phase = 0) {
+function pulseGroup(bundle, t, base = 1.0, amp = 0.05, phase = 0, animationConfig) {
   if (!bundle.groupRef.current?.visible) return;
   const outer = bundle.outerRef.current;
   const inner = bundle.innerRef.current;
@@ -273,17 +279,17 @@ function pulseGroup(bundle, t, base = 1.0, amp = 0.05, phase = 0) {
   const baseOpacity = bundle.opacityBase ?? 0.9;
   const baseInnerOpacity = Math.max(0, baseOpacity - 0.25);
 
-  const sOuter = baseScale * (1 + Math.sin(t * 2.1 + phase) * amp);
-  const sInner = baseScale * 0.75 * (1 + Math.sin(t * 2.6 + phase + Math.PI * 0.35) * (amp * 1.2));
+  const sOuter = baseScale * (1 + Math.sin(t * animationConfig.outerPulseFreq + phase) * amp);
+  const sInner = baseScale * animationConfig.innerScaleRatio * (1 + Math.sin(t * animationConfig.innerPulseFreq + phase + animationConfig.innerPhaseOffset) * (amp * animationConfig.innerAmpMultiplier));
   outer.scale.setScalar(sOuter);
   inner.scale.setScalar(sInner);
 
   // Only apply opacity changes in wireframe mode (MeshBasicMaterial with transparent)
   if (outer.material.transparent) {
-    const shimmerOuter = 0.1 * Math.sin(t * 2.0 + phase);
-    const shimmerInner = 0.1 * Math.sin(t * 2.7 + phase + 0.4);
-    outer.material.opacity = THREE.MathUtils.clamp(baseOpacity + shimmerOuter * 0.5, 0.05, 1.0);
-    inner.material.opacity = THREE.MathUtils.clamp(baseInnerOpacity + shimmerInner * 0.5, 0.05, 1.0);
+    const shimmerOuter = animationConfig.shimmerAmplitude * Math.sin(t * 2.0 + phase);
+    const shimmerInner = animationConfig.shimmerAmplitude * Math.sin(t * 2.7 + phase + 0.4);
+    outer.material.opacity = THREE.MathUtils.clamp(baseOpacity + shimmerOuter * animationConfig.shimmerMultiplier, 0.05, 1.0);
+    inner.material.opacity = THREE.MathUtils.clamp(baseInnerOpacity + shimmerInner * animationConfig.shimmerMultiplier, 0.05, 1.0);
   }
 }
 
