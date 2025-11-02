@@ -51,6 +51,42 @@ export default function App() {
     };
   }, [activeButton, handlePressEnd]);
 
+  // Loop audio while button is held
+  useEffect(() => {
+    const handleYesEnded = () => {
+      if (activeButton === STATES.yes && yesAudioRef.current) {
+        yesAudioRef.current.currentTime = 0;
+        yesAudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+      }
+    };
+
+    const handleNoEnded = () => {
+      if (activeButton === STATES.no && noAudioRef.current) {
+        noAudioRef.current.currentTime = 0;
+        noAudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+      }
+    };
+
+    const yesAudio = yesAudioRef.current;
+    const noAudio = noAudioRef.current;
+
+    if (yesAudio) {
+      yesAudio.addEventListener('ended', handleYesEnded);
+    }
+    if (noAudio) {
+      noAudio.addEventListener('ended', handleNoEnded);
+    }
+
+    return () => {
+      if (yesAudio) {
+        yesAudio.removeEventListener('ended', handleYesEnded);
+      }
+      if (noAudio) {
+        noAudio.removeEventListener('ended', handleNoEnded);
+      }
+    };
+  }, [activeButton]);
+
   return (
     <div className="app">
       <Canvas
