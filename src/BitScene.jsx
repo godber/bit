@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { Center, Text3D } from '@react-three/drei';
 import * as THREE from 'three';
 
 const TRANSITION_TIME = 300; // ms
@@ -237,6 +238,23 @@ export default function BitScene({ targetState, materialConfig, animationConfig,
       <directionalLight position={[5, 5, 5]} intensity={lightingConfig.mainLightIntensity} color={0xffffff} />
       <directionalLight position={[-5, -5, -5]} intensity={lightingConfig.backLightIntensity} color={0x4488ff} />
       <pointLight position={[0, 5, 0]} intensity={lightingConfig.topLightIntensity} color={0xffffff} />
+
+      {/* 3D Text */}
+      <Center position={[0, 1.5, 0]}>
+        <Text3D
+          font="/fonts/helvetiker_regular.typeface.json"
+          size={0.35}
+          height={0.1}
+          curveSegments={12}
+          bevelEnabled
+          bevelThickness={0.01}
+          bevelSize={0.01}
+          bevelSegments={5}
+        >
+          Hi, I am bit!
+          <meshStandardMaterial color="#1ec8ff" metalness={0.5} roughness={0.3} />
+        </Text3D>
+      </Center>
 
       <BitGroup bundle={idle} />
       <BitGroup bundle={yes} />

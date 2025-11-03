@@ -260,15 +260,11 @@ export default function App() {
         </Suspense>
       </Canvas>
 
-      <div className="hint">
-        Hi, I am bit ... ask me any question.
-      </div>
-
       <div className="chat-box">
         <input
           type="text"
           className="chat-input"
-          placeholder="Type your question here..."
+          placeholder="Ask me any question ..."
           value={questionText}
           onChange={(e) => setQuestionText(e.target.value)}
           onKeyDown={(e) => {
