@@ -1,9 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   root: '.',
-  base: './',
+  base: command === 'serve' ? '/' : '/bit/',
   plugins: [react()],
   server: {
     open: true
@@ -11,4 +11,4 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 2000
   }
-});
+}));

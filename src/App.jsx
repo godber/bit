@@ -311,8 +311,8 @@ export default function App() {
       )}
 
       {/* Audio elements */}
-      <audio ref={yesAudioRef} src="/bit-yes-original.mp3" preload="auto" />
-      <audio ref={noAudioRef} src="/bit-no.mp3" preload="auto" />
+      <audio ref={yesAudioRef} src={`${import.meta.env.BASE_URL}bit-yes-original.mp3`} preload="auto" />
+      <audio ref={noAudioRef} src={`${import.meta.env.BASE_URL}bit-no.mp3`} preload="auto" />
     </div>
   );
 }

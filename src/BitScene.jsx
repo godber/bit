@@ -242,7 +242,7 @@ export default function BitScene({ targetState, materialConfig, animationConfig,
       {/* 3D Text */}
       <Center position={[0, 1.5, 0]}>
         <Text3D
-          font="/fonts/helvetiker_regular.typeface.json"
+          font={`${import.meta.env.BASE_URL}fonts/helvetiker_regular.typeface.json`}
           size={0.35}
           height={0.1}
           curveSegments={12}
