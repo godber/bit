@@ -1,6 +1,10 @@
-# TRON Bit
+# Your Friend Bit
 
-Interactive Three.js visualization of the TRON Bit, now rendered through React Three Fiber. The experience is powered by React 19, Vite, and Bun, showcasing smooth wireframe transitions, press-and-hold interactions, and responsive layout.
+Interactive Three.js visualization of the Your Friend Bit, ask him anything!
+
+![Your Friend Bit](bit-no.png)
+
+Visit bit [here](https://misc.uberhip.com/bit/)
 
 ## Prerequisites
 - [Bun](https://bun.sh/) ≥ 1.1 (project declares `bun@1.1.10` in `package.json`)
