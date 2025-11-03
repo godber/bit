@@ -12,7 +12,7 @@ const STATES = {
 const COLORS = {
   idle: 0x1ec8ff,
   yes: 0xffd400,
-  no: 0xff6a00
+  no: 0xff0000
 };
 
 const createIdleGeometry = (size = 0.9) => {
@@ -51,14 +51,120 @@ const createIdleGeometry = (size = 0.9) => {
 
   return compound;
 };
-const createYesGeometry = (size = 1.05) => new THREE.BoxGeometry(size, size, size);
-const createNoGeometry = (size = 0.7, minAmp = 0.22, maxAmp = 0.5, seed = 7331) =>
-  makeSpikyGeometry(new THREE.IcosahedronGeometry(size, 2), { minAmp, maxAmp, seed });
+const createYesGeometry = (size = 1.05) => new THREE.OctahedronGeometry(size, 0);
+
+const createNoGeometry = (size = 0.7, stellationHeight = 0.5) => {
+  // Create second stellation of icosahedron
+  const baseIcosahedron = new THREE.IcosahedronGeometry(size, 0);
+  const positions = [];
+
+  // Get the base geometry data - convert to non-indexed if needed
+  let basePos = baseIcosahedron.attributes.position;
+  const baseIndex = baseIcosahedron.index;
+
+  // Helper vectors
+  const v1 = new THREE.Vector3();
+  const v2 = new THREE.Vector3();
+  const v3 = new THREE.Vector3();
+  const center = new THREE.Vector3();
+  const normal = new THREE.Vector3();
+
+  // Handle indexed geometry
+  if (baseIndex) {
+    // For each face of the icosahedron, create a triangular pyramid
+    for (let i = 0; i < baseIndex.count; i += 3) {
+      const idx1 = baseIndex.getX(i);
+      const idx2 = baseIndex.getX(i + 1);
+      const idx3 = baseIndex.getX(i + 2);
+
+      // Get the three vertices of the triangle
+      v1.fromBufferAttribute(basePos, idx1);
+      v2.fromBufferAttribute(basePos, idx2);
+      v3.fromBufferAttribute(basePos, idx3);
+
+      // Calculate face center
+      center.set(
+        (v1.x + v2.x + v3.x) / 3,
+        (v1.y + v2.y + v3.y) / 3,
+        (v1.z + v2.z + v3.z) / 3
+      );
+
+      // Calculate normal (pointing outward from center)
+      normal.copy(center).normalize();
+
+      // Create apex point for the pyramid
+      const apex = center.clone().add(normal.multiplyScalar(stellationHeight));
+
+      // Create three triangular faces for this pyramid
+      // Face 1: v1, v2, apex
+      positions.push(v1.x, v1.y, v1.z);
+      positions.push(v2.x, v2.y, v2.z);
+      positions.push(apex.x, apex.y, apex.z);
+
+      // Face 2: v2, v3, apex
+      positions.push(v2.x, v2.y, v2.z);
+      positions.push(v3.x, v3.y, v3.z);
+      positions.push(apex.x, apex.y, apex.z);
+
+      // Face 3: v3, v1, apex
+      positions.push(v3.x, v3.y, v3.z);
+      positions.push(v1.x, v1.y, v1.z);
+      positions.push(apex.x, apex.y, apex.z);
+    }
+  } else {
+    // Handle non-indexed geometry (vertices are already in triangle groups)
+    for (let i = 0; i < basePos.count; i += 3) {
+      // Get the three vertices of the triangle
+      v1.fromBufferAttribute(basePos, i);
+      v2.fromBufferAttribute(basePos, i + 1);
+      v3.fromBufferAttribute(basePos, i + 2);
+
+      // Calculate face center
+      center.set(
+        (v1.x + v2.x + v3.x) / 3,
+        (v1.y + v2.y + v3.y) / 3,
+        (v1.z + v2.z + v3.z) / 3
+      );
+
+      // Calculate normal (pointing outward from center)
+      normal.copy(center).normalize();
+
+      // Create apex point for the pyramid
+      const apex = center.clone().add(normal.multiplyScalar(stellationHeight));
+
+      // Create three triangular faces for this pyramid
+      // Face 1: v1, v2, apex
+      positions.push(v1.x, v1.y, v1.z);
+      positions.push(v2.x, v2.y, v2.z);
+      positions.push(apex.x, apex.y, apex.z);
+
+      // Face 2: v2, v3, apex
+      positions.push(v2.x, v2.y, v2.z);
+      positions.push(v3.x, v3.y, v3.z);
+      positions.push(apex.x, apex.y, apex.z);
+
+      // Face 3: v3, v1, apex
+      positions.push(v3.x, v3.y, v3.z);
+      positions.push(v1.x, v1.y, v1.z);
+      positions.push(apex.x, apex.y, apex.z);
+    }
+  }
+
+  // Create the final geometry
+  const stellatedGeometry = new THREE.BufferGeometry();
+  stellatedGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3));
+  stellatedGeometry.computeVertexNormals();
+  stellatedGeometry.computeBoundingSphere();
+
+  baseIcosahedron.dispose();
+
+  return stellatedGeometry;
+};
 
 export default function BitScene({ targetState, materialConfig, animationConfig, rotationConfig, lightingConfig, geometryConfig }) {
   const idle = useBitGroup(() => createIdleGeometry(geometryConfig.idleGeometrySize), COLORS.idle, 101, materialConfig);
   const yes = useBitGroup(() => createYesGeometry(geometryConfig.yesGeometrySize), COLORS.yes, 202, materialConfig);
-  const no = useBitGroup(() => createNoGeometry(geometryConfig.noGeometrySize, geometryConfig.noSpikyMinAmp, geometryConfig.noSpikyMaxAmp, geometryConfig.noSpikySeed), COLORS.no, 303, materialConfig);
+  const no = useBitGroup(() => createNoGeometry(geometryConfig.noGeometrySize, geometryConfig.noStellationHeight || 0.5), COLORS.no, 303, materialConfig);
 
   const currentState = useRef(STATES.idle);
   const transitionT = useRef(1);
@@ -120,6 +226,9 @@ export default function BitScene({ targetState, materialConfig, animationConfig,
     pulseGroup(idle, t, 1.0, animationConfig.idlePulseAmp, 0.0, animationConfig);
     pulseGroup(yes, t, 1.0, animationConfig.yesPulseAmp, 0.6, animationConfig);
     pulseGroup(no, t, 1.0, animationConfig.noPulseAmp, 1.2, animationConfig);
+
+    // Oscillate yes color between yellow and orange
+    oscillateYesColor(yes, t);
   });
 
   return (
@@ -293,6 +402,24 @@ function pulseGroup(bundle, t, base = 1.0, amp = 0.05, phase = 0, animationConfi
   }
 }
 
+function oscillateYesColor(bundle, t) {
+  if (!bundle.groupRef.current?.visible) return;
+  const outer = bundle.outerRef.current;
+  const inner = bundle.innerRef.current;
+
+  // Oscillate between yellow (0xffd400) and orange (0xff6a00)
+  const yellowColor = new THREE.Color(0xffd400);
+  const orangeColor = new THREE.Color(0xff6a00);
+
+  // Use sine wave to oscillate between 0 and 1
+  const oscillation = (Math.sin(t * 2.0) + 1) / 2;
+
+  const currentColor = new THREE.Color().lerpColors(yellowColor, orangeColor, oscillation);
+
+  outer.material.color.copy(currentColor);
+  inner.material.color.copy(currentColor);
+}
+
 function applyCrossfade(fromBundle, toBundle, e) {
   const scaleFrom = 1.0 - 0.4 * e;
   const scaleTo = 0.6 + 0.4 * e;
@@ -340,30 +467,6 @@ function setGroupOpacity(bundle, baseOp = 0.9) {
 
 function easeInOutCubic(x) {
   return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
-}
-
-function makeSpikyGeometry(baseGeom, { minAmp = 0.2, maxAmp = 0.5, seed = 42 } = {}) {
-  const geom = baseGeom.toNonIndexed();
-  baseGeom.dispose();
-  const pos = geom.attributes.position;
-  const v = new THREE.Vector3();
-  const rand = mulberry32(seed);
-
-  const amps = new Float32Array(pos.count);
-  for (let i = 0; i < pos.count; i++) {
-    amps[i] = minAmp + (maxAmp - minAmp) * rand();
-  }
-  for (let i = 0; i < pos.count; i++) {
-    v.fromBufferAttribute(pos, i);
-    const len = v.length() || 1.0;
-    v.normalize();
-    v.multiplyScalar(len + amps[i]);
-    pos.setXYZ(i, v.x, v.y, v.z);
-  }
-  pos.needsUpdate = true;
-  geom.computeVertexNormals();
-  geom.computeBoundingSphere();
-  return geom;
 }
 
 function mulberry32(a) {

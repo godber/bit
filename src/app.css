@@ -3,6 +3,7 @@
   --cyan: #1ec8ff;
   --yellow: #ffd400;
   --orange: #ff6a00;
+  --red: #ff0000;
 }
 
 .app {
@@ -24,6 +25,47 @@
   opacity: 0.65;
   font-size: 0.9rem;
   pointer-events: none;
+}
+
+.chat-box {
+  position: fixed;
+  bottom: 5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  width: 90%;
+  max-width: 500px;
+  pointer-events: none;
+}
+
+.chat-input {
+  pointer-events: auto;
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--cyan);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  color: var(--cyan);
+  font-size: 1rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.chat-input::placeholder {
+  color: rgba(30, 200, 255, 0.5);
+}
+
+.chat-input:focus {
+  border-color: var(--yellow);
+  box-shadow: 0 0 10px rgba(255, 212, 0, 0.3);
+}
+
+.chat-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .ui {
@@ -57,6 +99,17 @@
 }
 
 .btn-no {
-  background: var(--orange);
-  color: #111;
+  background: var(--red);
+  color: #fff;
+}
+
+.btn-ask {
+  background: var(--cyan);
+  color: #000;
+  min-width: 80px;
+}
+
+.btn-ask:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

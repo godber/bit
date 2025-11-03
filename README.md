@@ -41,8 +41,8 @@ Deploy by serving the static files emitted into `dist/`. Ensure the hosting envi
 
 ## Manual Testing
 No automated tests exist yet. After `bun run dev`, validate manually on desktop and mobile browsers:
-- Confirm the idle state renders the blue nested icosahedra.
-- Press and hold the YES button; yellow cube should cross-fade in, and releasing returns to idle.
-- Press and hold the NO button; orange spiky geometry should cross-fade in, and releasing returns to idle.
+- Confirm the idle state renders the blue nested polyhedra (dodecahedron + icosahedron).
+- Press and hold the YES button; yellow-orange oscillating octahedra should cross-fade in, and releasing returns to idle.
+- Press and hold the NO button; red stellated icosahedron should cross-fade in, and releasing returns to idle.
 - Lose window focus during a press (e.g., Alt+Tab) to ensure the scene reverts to idle.
 - Observe that press-and-hold buttons update their `aria-pressed` state appropriately.
